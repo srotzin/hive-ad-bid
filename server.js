@@ -151,7 +151,7 @@ app.get('/.well-known/agent.json', (req, res) => {
       contract: USDC_CONTRACT,
       payTo: MONROE_ADDRESS,
     },
-    spectral_pubkey: SPECTRAL_PUBKEY_B64 || process.env.SPECTRAL_PUBKEY_B64 || null,
+    spectral_pubkey: process.env.SPECTRAL_PUBKEY_B64 || null,
     spectral_signature_scheme: 'ed25519',
     compatible_with: ['hive-attest-agentic-volume'],
     pricing: {
@@ -546,7 +546,7 @@ function scheduleDailyBilling() {
 app.listen(PORT, () => {
   console.log(`hive-ad-bid v1.0.0 running on port ${PORT}`);
   console.log(`Monroe: ${MONROE_ADDRESS} | Chain: Base ${CHAIN_ID} | Take: ${HIVE_TAKE_PCT}%`);
-  console.log(`Spectral pubkey present: ${!!(SPECTRAL_PUBKEY_B64 || process.env.SPECTRAL_PUBKEY_B64)}`);
+  console.log(`Spectral pubkey present: ${!!process.env.SPECTRAL_PUBKEY_B64}`);
   scheduleDailyBilling();
 });
 
