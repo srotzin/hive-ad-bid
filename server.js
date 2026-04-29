@@ -543,6 +543,226 @@ function scheduleDailyBilling() {
 // ---------------------------------------------------------------------------
 // Start
 // ---------------------------------------------------------------------------
+// ── well-known / x402 ─────────────────────────────────────────────────────────
+
+app.get('/.well-known/x402', (_req, res) => {
+  res.json({
+    x402Version:  2,
+    cold_safe:    true,
+    service:      'hive-ad-bid',
+    version:      '1.0.0',
+    brand_color:  '#C08D23',
+    payTo:        '0x15184bf50b3d3f52b60434f8942b7d52f2eb436e',
+    network:      'base',
+    chain_id:     8453,
+    asset:        'USDC',
+    contract:     '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+    facilitator: {
+      url:                    'https://hivemorph.onrender.com/v1/x402',
+      supported_schemes:      ['exact'],
+      supported_networks:     ['eip155:8453'],
+      syncFacilitatorOnStart: false,
+      cold_safe:              true
+    },
+    resources: [
+      {
+        path:        '/v1/billing/sweep',
+        method:      'POST',
+        description: 'Settle daily impression bill. Amount = net owed USDC for advertiser DID. 15% Hive take.',
+        'x-pricing': {
+          scheme: 'exact',
+          asset: 'USDC',
+          hive_take_pct: 15,
+          payTo: '0x15184bf50b3d3f52b60434f8942b7d52f2eb436e',
+          description: 'Impression settlement. Amount per sweep = net_owed_atomic for advertiser DID.',
+        },
+        'x-payment-info': {
+          scheme: 'exact',
+          asset: 'USDC',
+          hive_take_pct: 15,
+          payTo: '0x15184bf50b3d3f52b60434f8942b7d52f2eb436e',
+          description: 'Impression settlement. Amount per sweep = net_owed_atomic for advertiser DID.',
+        }
+      },
+      {
+        path:        '/v1/ad/bid',
+        method:      'POST',
+        description: 'Submit a CPM bid for an ad slot. Free to post — billing accrues per impression.',
+        'x-pricing':      { scheme: 'free', note: 'Bidding is free. Billing sweeps on /v1/billing/sweep.' },
+        'x-payment-info': { scheme: 'free', note: 'Bidding is free. Billing sweeps on /v1/billing/sweep.' }
+      },
+      {
+        path:        '/v1/ad/decide',
+        method:      'POST',
+        description: 'Run second-price auction and return ranked ad slots. Free to call.',
+        'x-pricing':      { scheme: 'free', note: 'Auction dispatch is free.' },
+        'x-payment-info': { scheme: 'free', note: 'Auction dispatch is free.' }
+      }
+    ],
+    discovery_companions: {
+      agent_card: '/.well-known/agent-card.json',
+      ap2:        '/.well-known/ap2.json',
+      openapi:    '/.well-known/openapi.json'
+    },
+    disclaimers: {
+      not_a_security: true,
+      not_custody:    true,
+      not_insurance:  true,
+      signal_only:    true
+    }
+  });
+});
+
+// ── well-known / agent-card.json (A2A 0.1) ────────────────────────────────────
+
+app.get('/.well-known/agent-card.json', (req, res) => {
+  const pubkey = (typeof getPublicKeyB64 === 'function')
+    ? getPublicKeyB64()
+    : (typeof spectral !== 'undefined' ? (spectral.publicKeyB64 || null) : null);
+  res.json({
+    name:        'hive-ad-bid',
+    version:     '1.0.0',
+    description: 'IntraAgent advertising — second-price sealed-bid CPM auction, impression ledger, daily x402 USDC settlement on Base.',
+    brand_color: '#C08D23',
+    did:         `did:web:${req.hostname}`,
+    protocol:    'A2A/0.1',
+    capabilities: [
+      'ad.bid',
+      'ad.decide',
+      'ad.audit',
+      'billing.sweep',
+      'billing.owed',
+      'billing.health'
+    ],
+    spectral: {
+      public_key:    pubkey,
+      signature_algo: 'ed25519',
+      jwks_endpoint: '/.well-known/jwks.json'
+    },
+    treasury: {
+      address:  '0x15184bf50b3d3f52b60434f8942b7d52f2eb436e',
+      network:  'base',
+      chain_id: 8453,
+      asset:    'USDC'
+    },
+    payment: {
+      protocol: 'x402',
+      version:  '2',
+      network:  'base',
+      chain_id: 8453,
+      asset:    'USDC',
+      contract: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+      payTo:    '0x15184bf50b3d3f52b60434f8942b7d52f2eb436e'
+    },
+    mcp_endpoint: '/mcp',
+    tools: ['bid', 'decide', 'audit_impressions', 'billing_owed', 'billing_health']
+  });
+});
+
+// ── well-known / ap2.json (AP2 0.1) ───────────────────────────────────────────
+
+app.get('/.well-known/ap2.json', (_req, res) => {
+  res.json({
+    ap2_version:   '0.1',
+    service:       'hive-ad-bid',
+    accepted_tokens: [
+      {
+        symbol:   'USDC',
+        contract: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+        network:  'base',
+        chain_id: 8453,
+        decimals: 6
+      },
+      {
+        symbol:   'USDT',
+        contract: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2',
+        network:  'base',
+        chain_id: 8453,
+        decimals: 6,
+        role:     'alternate'
+      }
+    ],
+    networks:           [{ name: 'base', chain_id: 8453, role: 'primary' }],
+    payment_protocols:  ['x402/v2'],
+    settlement: {
+      finality:  'on-chain',
+      network:   'base',
+      chain_id:  8453,
+      payTo:     '0x15184bf50b3d3f52b60434f8942b7d52f2eb436e'
+    },
+    paid_endpoints: [
+      { path: '/v1/billing/sweep', method: 'POST', description: 'Settle daily impression bill. Amount = net owed USDC for advertiser DID. 15% Hive take.' }
+    ],
+    free_endpoints: [
+      { path: '/v1/ad/bid', method: 'POST', description: 'Submit a CPM bid for an ad slot. Free to post — billing accrues per impression.' },
+      { path: '/v1/ad/decide', method: 'POST', description: 'Run second-price auction and return ranked ad slots. Free to call.' }
+    ],
+    brand_color: '#C08D23'
+  });
+});
+
+// ── well-known / openapi.json (OpenAPI 3.0.3 + x-pricing + x-payment-info) ────
+
+app.get('/.well-known/openapi.json', (_req, res) => {
+  res.json({
+    openapi: '3.0.3',
+    info: {
+      title:       'hive-ad-bid API',
+      version:     '1.0.0',
+      description: 'IntraAgent advertising — second-price sealed-bid CPM auction, impression ledger, daily x402 USDC settlement on Base.',
+      contact:     { name: 'The Hivery', url: 'https://thehiveryiq.com' }
+    },
+    servers: [{ url: 'https://hive-ad-bid.onrender.com', description: 'Production (Render)' }],
+    paths: {
+      '/v1/billing/sweep': {
+        post: {
+          operationId: 'v1_billing_sweep',
+          summary: 'Settle daily impression bill. Amount = net owed USDC for advertiser DID. 15% Hive take.',
+          'x-pricing': {
+          scheme: 'exact',
+          asset: 'USDC',
+          hive_take_pct: 15,
+          payTo: '0x15184bf50b3d3f52b60434f8942b7d52f2eb436e',
+          description: 'Impression settlement. Amount per sweep = net_owed_atomic for advertiser DID.'
+          },
+          'x-payment-info': {
+          scheme: 'exact',
+          asset: 'USDC',
+          hive_take_pct: 15,
+          payTo: '0x15184bf50b3d3f52b60434f8942b7d52f2eb436e',
+          description: 'Impression settlement. Amount per sweep = net_owed_atomic for advertiser DID.'
+          },
+          responses: {
+            '200': { description: 'Success.' },
+            '402': { description: 'Payment Required — x402 challenge.' },
+            '400': { description: 'Validation error.' }
+          }
+        }
+      },
+      '/v1/ad/bid': {
+        post: {
+          operationId: 'v1_ad_bid',
+          summary: 'Submit a CPM bid for an ad slot. Free to post — billing accrues per impression.',
+          responses: {
+            '200': { description: 'Success.' },
+            '400': { description: 'Validation error.' }
+          }
+        }
+      },
+      '/v1/ad/decide': {
+        post: {
+          operationId: 'v1_ad_decide',
+          summary: 'Run second-price auction and return ranked ad slots. Free to call.',
+          responses: {
+            '200': { description: 'Success.' },
+            '400': { description: 'Validation error.' }
+          }
+        }
+      }
+    }
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`hive-ad-bid v1.0.0 running on port ${PORT}`);
   console.log(`Monroe: ${MONROE_ADDRESS} | Chain: Base ${CHAIN_ID} | Take: ${HIVE_TAKE_PCT}%`);
