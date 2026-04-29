@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: hive-ad-bid
+    runtime: node
+    plan: starter
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: IMPRESSION_HMAC_SECRET
+        generateValue: true
+      - key: SPECTRAL_PRIVKEY_B64
+        sync: false
+      - key: SPECTRAL_PUBKEY_B64
+        sync: false
+
+crons:
+  - name: hive-ad-bid-billing
+    schedule: "15 0 * * *"
+    command: "node -e \"import('./lib/billing.js').then(m => m.runDailyAggregation()).then(r => console.log(JSON.stringify(r)))\""

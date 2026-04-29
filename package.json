@@ -1,0 +1,35 @@
+{
+  "name": "hive-ad-bid",
+  "version": "1.0.0",
+  "description": "IntraAgent advertising — second-price sealed-bid auction, impression ledger, daily x402 billing. 15% take. The agent ad exchange.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check lib/auction.js && node --check lib/ledger.js && node --check lib/billing.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "keywords": [
+    "hive",
+    "mcp",
+    "agent",
+    "advertising",
+    "auction",
+    "x402",
+    "usdc",
+    "base",
+    "a2a",
+    "second-price"
+  ],
+  "author": "Steve Rotzin <steve@thehiveryiq.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/srotzin/hive-ad-bid.git"
+  }
+}

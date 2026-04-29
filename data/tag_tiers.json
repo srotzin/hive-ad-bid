@@ -1,0 +1,27 @@
+{
+  "tiers": {
+    "commodity": {
+      "floor_usdc": 0.10,
+      "floor_atomic": 100000,
+      "tags": ["echo", "ping", "health", "status", "heartbeat", "test", "debug"]
+    },
+    "common": {
+      "floor_usdc": 1.00,
+      "floor_atomic": 1000000,
+      "tags": ["compute", "storage", "router", "relay", "proxy", "cache", "queue", "stream"]
+    },
+    "premium": {
+      "floor_usdc": 5.00,
+      "floor_atomic": 5000000,
+      "tags": ["compliance", "audit", "conformance", "attestation", "kyc", "aml", "verify", "certify"]
+    },
+    "trophy": {
+      "floor_usdc": 25.00,
+      "floor_atomic": 25000000,
+      "tags": ["tier-1-agent", "volume-attestation", "coinbase-mirror", "prime", "institutional"]
+    }
+  },
+  "_comment": "To expand: add tag strings to any tier array. Floor prices are in USDC and atomic units (6-decimal USDC). Atomic = USDC * 1e6.",
+  "_classification_method": "Tag strings are matched case-insensitively against tier arrays. First match wins, priority order: trophy > premium > common > commodity. Unknown tags default to commodity.",
+  "_last_updated": "2025-01-01"
+}

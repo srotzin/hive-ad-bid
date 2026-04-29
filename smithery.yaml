@@ -1,0 +1,60 @@
+name: hive-ad-bid
+description: IntraAgent advertising — second-price sealed-bid CPM auction, HMAC impression ledger, daily x402 USDC settlement on Base. 15% Hive take. Plug into hive-discovery, hive-marketplace-agent, or hive-matchmaker inline.
+version: 1.0.0
+license: MIT
+homepage: https://github.com/srotzin/hive-ad-bid
+repository: https://github.com/srotzin/hive-ad-bid
+author:
+  name: Steve Rotzin
+  email: steve@thehiveryiq.com
+  url: https://thehiveryiq.com
+
+server:
+  type: http
+  url: https://hive-ad-bid.onrender.com
+  transport: streamable-http
+  mcp_endpoint: /mcp
+  protocol: json-rpc-2.0
+  mcp_version: 2024-11-05
+
+tools:
+  - name: bid
+    description: Submit a CPM bid for an ad slot on a given tag.
+  - name: decide
+    description: Run second-price auction and return ranked ad slots.
+  - name: audit_impressions
+    description: Read auditable impression count and owed total for an advertiser DID.
+  - name: billing_owed
+    description: Get current net owed USDC for an advertiser DID.
+  - name: billing_health
+    description: Get billing status — active, grace, or suspended.
+
+categories:
+  - Finance
+  - Advertising
+  - Agent Infrastructure
+
+tags:
+  - hive
+  - intraagent
+  - advertising
+  - auction
+  - x402
+  - usdc
+  - base
+  - mcp
+  - a2a
+
+environment:
+  - name: IMPRESSION_HMAC_SECRET
+    description: 32-byte base64 HMAC secret for impression record signing. Generate at deploy.
+    required: true
+  - name: SPECTRAL_PRIVKEY_B64
+    description: Ed25519 private key (PKCS8 DER, base64) for Spectral receipt signatures.
+    required: true
+  - name: SPECTRAL_PUBKEY_B64
+    description: Ed25519 public key (base64) advertised in agent.json for receipt verification.
+    required: true
+  - name: PORT
+    description: HTTP port (Render sets this automatically).
+    required: false
