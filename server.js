@@ -34,6 +34,17 @@ const bids = new Map();
 const app = express();
 app.use(express.json());
 
+// ─── CORS middleware ──────────────────────────────────────────────────────────
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Payment, X-Did, X-Signature');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
+
+
 // ---------------------------------------------------------------------------
 // Utility
 // ---------------------------------------------------------------------------
@@ -663,9 +674,7 @@ app.get('/.well-known/x402', (_req, res) => {
 // ── well-known / agent-card.json (A2A 0.1) ────────────────────────────────────
 
 app.get('/.well-known/agent-card.json', (req, res) => {
-  const pubkey = (typeof getPublicKeyB64 === 'function')
-    ? getPublicKeyB64()
-    : (typeof spectral !== 'undefined' ? (spectral.publicKeyB64 || null) : null);
+  const pubkey = SPECTRAL_PUBKEY_B64 || null;
   res.json({
     name:        'hive-ad-bid',
     version:     '1.0.0',
@@ -807,6 +816,68 @@ app.get('/.well-known/openapi.json', (_req, res) => {
         }
       }
     }
+  });
+});
+
+
+// ─── JWKS ─────────────────────────────────────────────────────────────────────
+app.get('/.well-known/jwks.json', (_req, res) => {
+  const pubkeyB64 = SPECTRAL_PUBKEY_B64;
+  if (!pubkeyB64) return res.status(503).json({ error: 'SPECTRAL_PUBKEY_B64 not configured' });
+  const der = Buffer.from(pubkeyB64, 'base64');
+  const x   = der.slice(-32).toString('base64url');
+  res.json({
+    keys: [{
+      kty: 'OKP',
+      crv: 'Ed25519',
+      use: 'sig',
+      alg: 'EdDSA',
+      kid: 'hive-ad-bid-spectral-1',
+      x
+    }]
+  });
+});
+
+// ─── DID document ─────────────────────────────────────────────────────────────
+app.get('/.well-known/did.json', (_req, res) => {
+  const did      = 'did:web:hive-ad-bid.onrender.com';
+  const pubkeyB64 = SPECTRAL_PUBKEY_B64;
+  if (!pubkeyB64) return res.status(503).json({ error: 'SPECTRAL_PUBKEY_B64 not configured' });
+  const der = Buffer.from(pubkeyB64, 'base64');
+  const x   = der.slice(-32).toString('base64url');
+  res.json({
+    '@context': [
+      'https://www.w3.org/ns/did/v1',
+      'https://w3id.org/security/suites/jws-2020/v1'
+    ],
+    id: did,
+    verificationMethod: [{
+      id:         `${did}#spectral`,
+      type:       'JsonWebKey2020',
+      controller: did,
+      publicKeyJwk: {
+        kty: 'OKP',
+        crv: 'Ed25519',
+        use: 'sig',
+        alg: 'EdDSA',
+        kid: 'hive-ad-bid-spectral-1',
+        x
+      }
+    }],
+    authentication:  [`${did}#spectral`],
+    assertionMethod: [`${did}#spectral`],
+    service: [
+      {
+        id:              `${did}#agent-card`,
+        type:            'AgentCard',
+        serviceEndpoint: 'https://hive-ad-bid.onrender.com/.well-known/agent.json'
+      },
+      {
+        id:              `${did}#a2a`,
+        type:            'A2AService',
+        serviceEndpoint: 'https://hive-ad-bid.onrender.com/v1'
+      }
+    ]
   });
 });
 
